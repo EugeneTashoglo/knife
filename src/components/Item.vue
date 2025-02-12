@@ -17,11 +17,15 @@ export default {
   },
   computed: {
     imagePath() {
-      const fileName = this.knife.image_url
-        .split("/")
-        .pop()
-        .replace(".jpg", ".png");
-      return images[`/src/assets/images/${fileName}`]?.default || "";
+      if (!this.knife.image_url) return "/default-image.jpg"; // ✅ Картинка по умолчанию
+
+      if (this.knife.image_url.startsWith("http")) {
+        return this.knife.image_url; // ✅ Если это внешняя ссылка, возвращаем её
+      }
+
+      const fileName = this.knife.image_url.split("/").pop().replace(".jpg", ".png");
+
+      return images[`/src/assets/images/${fileName}`]?.default || `/uploads/${fileName}`; // ✅ Либо файл из локальной папки
     },
   },
   methods: {

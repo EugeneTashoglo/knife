@@ -6,22 +6,80 @@
         <nav class="nav">
           <a href="#" class="nav-link">МАГАЗИН ИГРОВЫХ НОЖЕЙ</a>
           <a href="#" class="nav-link">ПОДДЕРЖКА</a>
+          <a v-if="user && user.role === 'admin'" href="/admin" class="nav-link admin-link">Админ-панель</a>
         </nav>
       </div>
       <div class="header-right">
         <button class="install-btn">Установить Steam</button>
         <div class="auth-links">
-          <a  class="login">войти через Steam</a>
-          <span class="divider">|</span>
-          <a href="#" class="language">язык</a>
+          <template v-if="user">
+            <img :src="user.avatar" alt="Avatar" class="avatar" />
+            <span class="username">{{ user.username }}</span>
+            <button @click="logout" class="logout-btn">Выйти</button>
+          </template>
+          <template v-else>
+            <a href="http://localhost:3000/auth/steam" class="login">Войти через Steam</a>
+          </template>
         </div>
       </div>
     </div>
-    <div class="banner">
-      <p>ВЫБЕРИ СВОЙ НОЖ ИЗ ИГРОВОЙ РЕАЛЬНОСТИ STEAM</p>
-    </div>
+ 
   </header>
 </template>
+
+<script>
+import { eventBus } from "@/eventBus";
+
+export default {
+  data() {
+    return {
+      user: null,
+    };
+  },
+  async mounted() {
+    await this.fetchUser();
+    eventBus.on("user-logged-out", this.handleLogout);
+  },
+  beforeUnmount() {
+    eventBus.off("user-logged-out", this.handleLogout);
+  },
+  methods: {
+    async fetchUser() {
+      try {
+        const response = await fetch("http://localhost:3000/api/user", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          this.user = await response.json();
+        } else {
+          this.user = null;
+        }
+      } catch (error) {
+        console.error("Ошибка загрузки пользователя:", error);
+      }
+    },
+
+    async logout() {
+      try {
+        await fetch("http://localhost:3000/logout", { credentials: "include" });
+
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+        });
+
+        eventBus.emit("user-logged-out");
+        await this.fetchUser();
+      } catch (error) {
+        console.error("Ошибка выхода:", error);
+      }
+    },
+
+    handleLogout() {
+      this.user = null;
+    },
+  },
+};
+</script>
 
 
 <style scoped>
@@ -30,7 +88,7 @@
   color: white;
   width: 100%;
   z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Тень для выделения */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 .container {
   display: flex;
@@ -73,22 +131,30 @@
   display: flex;
   align-items: center;
 }
-.login, .language {
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+.username {
+  color: white;
+  font-weight: bold;
+  margin-right: 10px;
+}
+.logout-btn {
+  background: #ff5555;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.login {
   color: white;
   text-decoration: none;
 }
-.divider {
-  margin: 0 5px;
-  color: gray;
-}
-.banner {
-  background-color: #111;
-  text-align: center;
-  padding: 15px 0;
-  margin-top: 60px;
-}
-.banner h1 {
-  font-size: 18px;
+.admin-link {
+  color: red;
   font-weight: bold;
 }
 </style>
